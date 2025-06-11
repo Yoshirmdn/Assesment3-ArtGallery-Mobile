@@ -14,6 +14,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -34,6 +38,7 @@ import androidx.compose.ui.window.Dialog
 import com.rioramdani0034.mobpro1.R
 import com.rioramdani0034.mobpro1.ui.theme.Mobpro1Theme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArtDialog(
     bitmap: Bitmap?,
@@ -42,7 +47,11 @@ fun ArtDialog(
 ) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+
     var category by remember { mutableStateOf("") }
+    val categoryOptions = listOf("Lukisan", "Patung", "Fotografi", "Digital Art", "Instalasi")
+    var expanded by remember { mutableStateOf(false) }
+
     var origin by remember { mutableStateOf("") }
     var artist by remember { mutableStateOf("") }
 
@@ -95,19 +104,41 @@ fun ArtDialog(
                         .padding(top = 8.dp)
                 )
 
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text(stringResource(R.string.kategori)) },
-                    maxLines = 1,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Words,
-                        imeAction = ImeAction.Next
-                    ),
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
-                )
+                ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.kategori)) },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        categoryOptions.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text(selectionOption) },
+                                onClick = {
+                                    category = selectionOption
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = origin,

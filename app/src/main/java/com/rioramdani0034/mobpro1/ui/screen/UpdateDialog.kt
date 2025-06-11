@@ -1,24 +1,12 @@
 package com.rioramdani0034.mobpro1.ui.screen
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -29,17 +17,21 @@ import androidx.compose.ui.window.Dialog
 import com.rioramdani0034.mobpro1.R
 import com.rioramdani0034.mobpro1.model.Art
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpdateDialog(
     art: Art,
     onDismissRequest: () -> Unit,
     onConfirmation: (String, String, String, String, String) -> Unit
 ) {
+    val categoryOptions = listOf("Lukisan", "Patung", "Fotografi", "Digital Art", "Instalasi")
+
     var title by remember { mutableStateOf(art.title) }
     var description by remember { mutableStateOf(art.description) }
     var category by remember { mutableStateOf(art.category) }
     var origin by remember { mutableStateOf(art.origin) }
     var artist by remember { mutableStateOf(art.artist) }
+    var expanded by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismissRequest) {
         Card(
@@ -82,19 +74,41 @@ fun UpdateDialog(
                         .padding(top = 8.dp)
                 )
 
-                OutlinedTextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text(stringResource(R.string.kategori)) },
-                    maxLines = 1,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Words,
-                        imeAction = ImeAction.Next
-                    ),
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
-                )
+                ) {
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        readOnly = true,
+                        label = { Text(stringResource(R.string.kategori)) },
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded)
+                        },
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        categoryOptions.forEach { selectionOption ->
+                            DropdownMenuItem(
+                                text = { Text(selectionOption) },
+                                onClick = {
+                                    category = selectionOption
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
 
                 OutlinedTextField(
                     value = origin,
@@ -125,7 +139,9 @@ fun UpdateDialog(
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     OutlinedButton(
