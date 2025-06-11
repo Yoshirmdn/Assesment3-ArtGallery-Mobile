@@ -6,11 +6,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.rioramdani0034.mobpro1.R
-import com.rioramdani0034.mobpro1.model.Hewan
+import com.rioramdani0034.mobpro1.model.Art
 
 @Composable
 fun DeleteConfirmDialog(
-    hewan: Hewan,
+    art: Art,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -20,7 +20,7 @@ fun DeleteConfirmDialog(
             Text(text = stringResource(R.string.hapus_hewan_title))
         },
         text = {
-            Text(text = stringResource(R.string.hapus_hewan_body, hewan.nama))
+            Text(text = stringResource(R.string.hapus_hewan_body, art.title))
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
