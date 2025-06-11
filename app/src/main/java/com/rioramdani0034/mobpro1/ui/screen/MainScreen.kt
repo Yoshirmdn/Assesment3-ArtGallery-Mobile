@@ -114,14 +114,14 @@ fun MainScreen() {
     val errorMessage by viewModel.errorMessage
 
     var showDialog by remember { mutableStateOf(false) }
-    var showHewanDialog by remember { mutableStateOf(false) }
+    var showArtDialog by remember { mutableStateOf(false) }
     var showDetailDialog by remember { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
 
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
         bitmap = getCroppedImage(context.contentResolver, it)
-        if (bitmap != null) showHewanDialog = true
+        if (bitmap != null) showArtDialog = true
     }
     val deleteStatus by viewModel.deleteStatus
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -212,13 +212,13 @@ fun MainScreen() {
                 showDialog = false
             }
         }
-        if (showHewanDialog) {
+        if (showArtDialog) {
             ArtDialog(
                 bitmap = bitmap,
-                onDismissRequest = { showHewanDialog = false }
+                onDismissRequest = { showArtDialog = false }
             ) { title, description, category, origin, artist ->
                 viewModel.saveData(title, description, category, origin, artist, bitmap!!)
-                showHewanDialog = false
+                showArtDialog = false
             }
         }
         if (showDeleteDialog && selectedArt != null) {

@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rioramdani0034.mobpro1.model.Art
 import com.rioramdani0034.mobpro1.network.ApiStatus
-import com.rioramdani0034.mobpro1.network.HewanApi
+import com.rioramdani0034.mobpro1.network.ArtApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -31,7 +31,7 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             status.value = ApiStatus.LOADING
             try {
-                val response = HewanApi.service.getHewan()
+                val response = ArtApi.service.getArt()
                 data.value = response
                 status.value = ApiStatus.SUCCESS
                 Log.d("MainViewModel", "Loaded ${response.size} artworks")
@@ -52,7 +52,7 @@ class MainViewModel : ViewModel() {
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                HewanApi.service.postHewan(
+                ArtApi.service.postArt(
                     title.toRequestBody("text/plain".toMediaTypeOrNull()),
                     description.toRequestBody("text/plain".toMediaTypeOrNull()),
                     category.toRequestBody("text/plain".toMediaTypeOrNull()),
@@ -80,7 +80,7 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val imagePart = bitmap?.toMultipartBody()
-                HewanApi.service.updateHewan(
+                ArtApi.service.updateArt(
                     id,
                     title.toRequestBody("text/plain".toMediaTypeOrNull()),
                     description.toRequestBody("text/plain".toMediaTypeOrNull()),
@@ -100,7 +100,7 @@ class MainViewModel : ViewModel() {
     fun deleteData(artworkId: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val result = HewanApi.service.deleteHewan(artworkId)
+                val result = ArtApi.service.deleteArt(artworkId)
                 deleteStatus.value = result.message
                 retrieveData()
             } catch (e: Exception) {

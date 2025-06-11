@@ -25,13 +25,13 @@ private val retrofit = Retrofit.Builder()
     .baseUrl(BASE_URL)
     .build()
 
-interface HewanApiService {
+interface ArtApiService {
     @GET("artworks")
-    suspend fun getHewan(): List<Art>
+    suspend fun getArt(): List<Art>
 
     @Multipart
     @POST("artworks")
-    suspend fun postHewan(
+    suspend fun postArt(
         @Part("title") title: RequestBody,
         @Part("description") description: RequestBody,
         @Part("category") category: RequestBody,
@@ -42,7 +42,7 @@ interface HewanApiService {
 
     @Multipart
     @PUT("artworks/{id}")
-    suspend fun updateHewan(
+    suspend fun updateArt(
         @Path("id") id: String,
         @Part("title") title: RequestBody,
         @Part("description") description: RequestBody,
@@ -53,17 +53,17 @@ interface HewanApiService {
     ): Art
 
     @DELETE("artworks/{id}")
-    suspend fun deleteHewan(
+    suspend fun deleteArt(
         @Path("id") id: String
     ): DeleteResponse
 }
 
-object HewanApi {
-    val service: HewanApiService by lazy {
-        retrofit.create(HewanApiService::class.java)
+object ArtApi {
+    val service: ArtApiService by lazy {
+        retrofit.create(ArtApiService::class.java)
     }
 
-    fun getHewanUrl(imageUrl: String): String {
+    fun getArtUrl(imageUrl: String): String {
         return imageUrl
     }
 }
