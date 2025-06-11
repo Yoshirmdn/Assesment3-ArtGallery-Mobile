@@ -10,23 +10,35 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -46,6 +58,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -53,9 +67,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
@@ -75,16 +91,19 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.rioramdani0034.mobpro1.BuildConfig
 import com.rioramdani0034.mobpro1.R
-import com.rioramdani0034.mobpro1.model.Hewan
+import com.rioramdani0034.mobpro1.model.Art
 import com.rioramdani0034.mobpro1.model.User
 import com.rioramdani0034.mobpro1.network.ApiStatus
-import com.rioramdani0034.mobpro1.network.HewanApi
 import com.rioramdani0034.mobpro1.network.UserDataStore
 import com.rioramdani0034.mobpro1.ui.theme.Mobpro1Theme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
@@ -96,6 +115,8 @@ fun MainScreen() {
 
     var showDialog by remember { mutableStateOf(false) }
     var showHewanDialog by remember { mutableStateOf(false) }
+    var showDetailDialog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
 
     var bitmap: Bitmap? by remember { mutableStateOf(null) }
     val launcher = rememberLauncherForActivityResult(CropImageContract()) {
@@ -104,7 +125,7 @@ fun MainScreen() {
     }
     val deleteStatus by viewModel.deleteStatus
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var selectedHewan by remember { mutableStateOf<Hewan?>(null) }
+    var selectedArt by remember { mutableStateOf<Art?>(null) }
     LaunchedEffect(deleteStatus) {
         if (deleteStatus != null) {
             Toast.makeText(context, deleteStatus, Toast.LENGTH_SHORT).show()
@@ -129,7 +150,6 @@ fun MainScreen() {
                                 signIn(context, dataStore)
                             }
                         } else {
-//                            Log.d("SIGN-IN", "User: $user")
                             showDialog = true
                         }
                     })
@@ -165,14 +185,22 @@ fun MainScreen() {
     ){
             innerPadding ->
         ScreenContent(
-            viewModel,
-            userId = user.email,
+            viewModel = viewModel,
+            isUserLoggedIn = user.email.isNotEmpty(),
             modifier = Modifier.padding(innerPadding),
-            onDeleteClick = { hewan ->
-                selectedHewan = hewan
+            onDeleteClick = { art ->
+                selectedArt = art
                 showDeleteDialog = true
+            },
+            onEditClick = { art ->
+                selectedArt = art
+                showUpdateDialog = true
+            }, onItemClick = { art ->
+                selectedArt = art
+                showDetailDialog = true
             }
         )
+
         if (showDialog) {
             ProfilDialog(
                 user = user,
@@ -185,24 +213,25 @@ fun MainScreen() {
             }
         }
         if (showHewanDialog) {
-            HewanDialog(
+            ArtDialog(
                 bitmap = bitmap,
-                onDismissRequest = { showHewanDialog = false }) { nama, namaLatin ->
-                viewModel.saveData(user.email, nama, namaLatin, bitmap!!)
+                onDismissRequest = { showHewanDialog = false }
+            ) { title, description, category, origin, artist ->
+                viewModel.saveData(title, description, category, origin, artist, bitmap!!)
                 showHewanDialog = false
             }
         }
-        if (showDeleteDialog && selectedHewan != null) {
+        if (showDeleteDialog && selectedArt != null) {
             DeleteConfirmDialog(
-                hewan = selectedHewan!!,
+                art = selectedArt!!,
                 onDismiss = {
                     showDeleteDialog = false
-                    selectedHewan = null
+                    selectedArt = null
                 },
                 onConfirm = {
-                    viewModel.deleteData(user.email, selectedHewan!!.id)
+                    viewModel.deleteData(selectedArt!!.id)
                     showDeleteDialog = false
-                    selectedHewan = null
+                    selectedArt = null
                 }
             )
         }
@@ -210,60 +239,34 @@ fun MainScreen() {
             Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
             viewModel.clearMessage()
         }
-    }
-}
-
-@Composable
-fun ScreenContent(viewModel: MainViewModel, userId: String, onDeleteClick: (Hewan) -> Unit, modifier: Modifier = Modifier) {
-    val data by viewModel.data
-    val status by viewModel.status.collectAsState()
-
-    LaunchedEffect(userId) {
-        viewModel.retrieveData(userId)
-    }
-
-    when(status){
-        ApiStatus.LOADING -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
+        if (showDetailDialog && selectedArt != null) {
+            DetailDialog(
+                art = selectedArt!!,
+                onDismiss = {
+                    showDetailDialog = false
+                    selectedArt = null
+                }
+            )
         }
-        ApiStatus.SUCCESS -> {
-            LazyVerticalGrid(
-                modifier = modifier.fillMaxSize().padding(4.dp),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(data) {
-                    ListItem(
-                        hewan = it,
-                        onDeleteClick = if (it.mine == 1) { // Hanya untuk hewan milik user
-                            { onDeleteClick(it) }
-                        } else null
+        if (showUpdateDialog && selectedArt != null) {
+            UpdateDialog(
+                art = selectedArt!!,
+                onDismissRequest = {
+                    showUpdateDialog = false
+                    selectedArt = null
+                },
+                onConfirmation = { title, description, category, origin, artist ->
+                    viewModel.updateData(
+                        selectedArt!!.id,
+                        title, description, category, origin, artist,
+                        null
                     )
+                    showUpdateDialog = false
+                    selectedArt = null
                 }
-            }
+            )
         }
-        ApiStatus.FAILED ->{
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(text = stringResource(id = R.string.error))
-                Button(
-                    onClick = {viewModel.retrieveData(userId)},
-                    modifier = Modifier.padding(top = 16.dp),
-                    contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
-                ) {
-                    Text(text = stringResource(id = R.string.try_again))
-                }
 
-            }
-        }
     }
 }
 
@@ -281,7 +284,7 @@ private suspend fun signIn(context: Context, dataStore: UserDataStore) {
         val result = credentialManager.getCredential(context, request)
         handleSignIn(result, dataStore)
     } catch (e: GetCredentialException) {
-        Log.e("SIGN-IN", "Error: ${e.errorMessage}")
+        Log.e("SIGN-IN", context.getString(R.string.sign_in_error, e.errorMessage))
     }
 }
 
@@ -317,7 +320,7 @@ private suspend fun signOut(context: Context, dataStore: UserDataStore) {
         )
         dataStore.saveData(User("", "", ""))
     } catch (e: ClearCredentialException) {
-        Log.e("SIGN-IN", "Error: ${e.errorMessage}")
+        Log.e("SIGN-IN", context.getString(R.string.sign_in_error, e.errorMessage))
     }
 }
 
@@ -341,73 +344,319 @@ private fun getCroppedImage(
 }
 
 @Composable
-fun ListItem(
-    hewan: Hewan,
-    onDeleteClick: (() -> Unit)? = null
-) {
-    Box(
-        modifier = Modifier
-            .padding(4.dp)
-            .border(1.dp, Color.Gray),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(
-                    HewanApi.getHewanUrl(hewan.imageId)
-                )
-                .crossfade(enable = true)
-                .build(),
-            contentDescription = stringResource(R.string.gambar, hewan.nama),
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(id = R.drawable.loading_img),
-            error = painterResource(id = R.drawable.broken_img),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp)
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp)
-                .background(Color(red = 0f, green = 0f, blue = 0f, alpha = 0.5f))
-                .padding(4.dp)
-        ) {
-            Column(
-                modifier = Modifier.align(Alignment.CenterStart)
-            ) {
-                Text(
-                    text = hewan.nama,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Text(
-                    text = hewan.namaLatin,
-                    fontStyle = FontStyle.Italic,
-                    fontSize = 14.sp,
-                    color = Color.White
-                )
-            }
+fun ScreenContent(viewModel: MainViewModel, isUserLoggedIn: Boolean, onDeleteClick: (Art) -> Unit, onItemClick: (Art) -> Unit, onEditClick: (Art) -> Unit, modifier: Modifier = Modifier) {
+    val data by viewModel.data
+    val status by viewModel.status.collectAsState()
 
-            if (onDeleteClick != null) {
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.hapus),
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+    LaunchedEffect(Unit) {
+        viewModel.retrieveData()
+    }
+
+    when(status){
+        ApiStatus.LOADING -> {
+            Box(
+                modifier = modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+        ApiStatus.SUCCESS -> {
+            LazyVerticalGrid(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFFAFAFA)),
+                columns = GridCells.Fixed(1),
+                contentPadding = PaddingValues(
+                    top = 16.dp,
+                    bottom = 100.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                items(
+                    items = data,
+                    key = { it.id }
+                ) { art ->
+                    ListItem(
+                        art = art,
+                        onDeleteClick = if (isUserLoggedIn) { { onDeleteClick(art) } } else null,
+                        onEditClick = if (isUserLoggedIn) { { onEditClick(art) } } else null,
+                        onClick = { onItemClick(art) }
                     )
+                }
+            }
+        }
+        ApiStatus.FAILED ->{
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = stringResource(id = R.string.error))
+                Button(
+                    onClick = {viewModel.retrieveData()},
+                    modifier = Modifier.padding(top = 16.dp),
+                    contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
+                ) {
+                    Text(text = stringResource(id = R.string.try_again))
                 }
             }
         }
     }
 }
 
+@Composable
+fun ListItem(
+    art: Art,
+    onDeleteClick: (() -> Unit)? = null,
+    onEditClick: (() -> Unit)? = null,
+    onClick: (() -> Unit)? = null
+) {
+    val context = LocalContext.current
+
+    Card(
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(art.image)
+                        .crossfade(true)
+                        .listener(
+                            onError = { _, result ->
+                                Log.e("IMG", context.getString(R.string.image_error, "${art.image} - ${result.throwable}"))
+                            },
+                            onSuccess = { _, _ ->
+                                Log.d("IMG", context.getString(R.string.image_loaded_success, art.image))
+                            }
+                        )
+                        .build(),
+                    contentDescription = stringResource(R.string.gambar, art.title),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = R.drawable.loading_img),
+                    error = painterResource(id = R.drawable.broken_img),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.7f)
+                                ),
+                                startY = 0f,
+                                endY = Float.POSITIVE_INFINITY
+                            )
+                        )
+                )
+                if (onDeleteClick != null || onEditClick != null) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (onEditClick != null) {
+                            Card(
+                                modifier = Modifier.size(40.dp),
+                                shape = CircleShape,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White.copy(alpha = 0.9f)
+                                ),
+                                onClick = onEditClick
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = stringResource(R.string.edit),
+                                        tint = Color(0xFF2196F3),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                        if (onDeleteClick != null) {
+                            Card(
+                                modifier = Modifier.size(40.dp),
+                                shape = CircleShape,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White.copy(alpha = 0.9f)
+                                ),
+                                onClick = onDeleteClick
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = stringResource(R.string.hapus),
+                                        tint = Color(0xFFF44336),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Card(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF2196F3)
+                    )
+                ) {
+                    Text(
+                        text = art.category.uppercase(),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        fontSize = 11.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
+            ) {
+                Text(
+                    text = art.title,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 22.sp,
+                    color = Color(0xFF1A1A1A),
+                    lineHeight = 28.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = Color(0xFF666666),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = art.origin,
+                        fontSize = 14.sp,
+                        color = Color(0xFF666666),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .height(20.dp)
+                            .background(
+                                Color(0xFF2196F3),
+                                RoundedCornerShape(2.dp)
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = stringResource(R.string.karya_oleh),
+                            fontSize = 12.sp,
+                            color = Color(0xFF888888),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = art.artist,
+                            fontSize = 16.sp,
+                            color = Color(0xFF2196F3),
+                            fontWeight = FontWeight.Bold,
+                            fontStyle = FontStyle.Italic
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DetailDialog(art: Art, onDismiss: () -> Unit) {
+    val formattedDate = try {
+        OffsetDateTime.parse(art.updatedAt).format(
+            DateTimeFormatter.ofPattern("dd MMMM yyyy HH:mm", Locale("id"))
+        )
+    } catch (e: Exception) {
+        art.updatedAt
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .background(Color.White, shape = RoundedCornerShape(16.dp))
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            AsyncImage(
+                model = art.image,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(16.dp)),
+                contentScale = ContentScale.Crop
+            )
+            Text("\n${art.title}", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Text("\nBy: ${art.artist}", fontStyle = FontStyle.Italic)
+            Text("Kategori: ${art.category}")
+            Text("Asal: ${art.origin}")
+            Text("\nDeskripsi: ${art.description}")
+            Text("\nUpdate: $formattedDate", fontSize = 12.sp, fontStyle = FontStyle.Italic)
+
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .padding(top = 12.dp)
+            ) {
+                Text(stringResource(R.string.tutup))
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true)
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
