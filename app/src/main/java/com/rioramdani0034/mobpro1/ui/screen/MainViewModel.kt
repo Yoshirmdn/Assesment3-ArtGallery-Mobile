@@ -15,6 +15,9 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayOutputStream
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class MainViewModel : ViewModel() {
 
@@ -32,9 +35,20 @@ class MainViewModel : ViewModel() {
             status.value = ApiStatus.LOADING
             try {
                 val response = ArtApi.service.getArt()
-                data.value = response
+                val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+                parser.timeZone = TimeZone.getTimeZone("UTC")
+
+                val sorted = response.sortedByDescending { art ->
+                    try {
+                        parser.parse(art.createdAt)?.time ?: 0L
+                    } catch (e: Exception) {
+                        0L
+                    }
+                }
+
+                data.value = sorted
                 status.value = ApiStatus.SUCCESS
-                Log.d("MainViewModel", "Loaded ${response.size} artworks")
+                Log.d("MainViewModel", "Loaded ${sorted.size} artworks")
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Failure: ${e.message}", e)
                 status.value = ApiStatus.FAILED
