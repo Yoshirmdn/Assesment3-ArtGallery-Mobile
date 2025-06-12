@@ -315,7 +315,7 @@ fun MainScreen() {
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
-                                    contentDescription = stringResource(id = R.string.tambah_hewan),
+                                    contentDescription = stringResource(id = R.string.tambah_karya),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
